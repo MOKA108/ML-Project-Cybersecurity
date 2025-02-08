@@ -3,12 +3,10 @@ import pandas as pd
 
 
 # the title of the app
-st.write(
-    """
-# Cybersecurity attack type prediction ML model
-
-"""
-)
+# Streamlit UI
+st.title("Cybersecurity Attack Type Prediction ML Model")
+st.header("CSV File Importer")
+st.write("Upload a CSV file to predict the attack type.")
 
 
 # Set the title of the app
