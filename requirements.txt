@@ -8,8 +8,10 @@ click==8.1.8
 duckdb==1.2.0
 gitdb==4.0.12
 GitPython==3.1.44
+hdbscan==0.8.40
 idna==3.10
 Jinja2==3.1.5
+joblib==1.4.2
 jsonschema==4.23.0
 jsonschema-specifications==2024.10.1
 markdown-it-py==3.0.0
@@ -30,10 +32,13 @@ referencing==0.36.2
 requests==2.32.3
 rich==13.9.4
 rpds-py==0.22.3
+scikit-learn==1.6.1
+scipy==1.15.1
 six==1.17.0
 smmap==5.0.2
 streamlit==1.41.1
 tenacity==9.0.0
+threadpoolctl==3.5.0
 toml==0.10.2
 tornado==6.4.2
 typing_extensions==4.12.2
