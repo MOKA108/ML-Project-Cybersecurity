@@ -1,8 +1,36 @@
-# ML_project_st_cloud_app
-This is the GitHub repository for the Web Application of the Cybersecurity Attacks Machine Learning project.
+# DSTI Python Machine Learning Project
 
-Here is the web application: https://cybersecurity-attack-type-prediction.streamlit.app/
+## Overview
+This project is done in the scope of the DSTI Python ML course.
+You can find the main project in the folder "MLproject".
+You can find the app files in the folder "WebApp"
 
-TO DO
-- put the link to the main github repo OR put the jupyter notebook here ?
-  
+
+Here is the Web Application we created: https://cybersecurity-attack-type-prediction.streamlit.app/
+
+
+The team working on this project is composed of:
+
+- 2 Data Scientists: Yasmine El khdar, Gaia Bianciotto
+- 1 Data Engineer: Marie-Caroline Bertheau
+- 3 Data Analysts: Giti Shekari, Aubain Kokou Viglo, Anthony Baudchon
+
+
+The project include:
+
+- a Jupyter Notebook to analyse the dataset cybersecurity_attack.csv and train the best ML model to predict the Attack Types
+- a Web Application to show result of the model prediction (we used Streamlit)
+- a report explaining the whole project and our decisions
+- a GitHub page (where you are!)
+- a video to show a short presentation of the Web Application
+
+
+The Jupyter Notebook include 4 parts:
+
+- Exploratory Data Analysis
+- Feature Engineering
+- Encoding
+- Modeling
+
+
+Note: see installation for more guidelines.
