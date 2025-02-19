@@ -1,9 +1,10 @@
 import streamlit as st
 import pandas as pd
-# import pickle
+import pickle
 import hdbscan
 
 from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.metrics import classification_report, accuracy_score
 
@@ -29,92 +30,135 @@ if uploaded_file is not None:
     df_cyber_processed = pd.read_csv(uploaded_file)
 
     # Displaying the DataFrame
-    st.write("DataFrame:")
+    st.write("Dataset preview:")
     st.dataframe(df_cyber_processed)
 
-    # Making predictions
-    # predictions = model.fit_predict(df_cyber_processed)
 
-    # Show cluster assignments
-    # st.subheader("Cluster Assignments")
-    # st.write(pd.DataFrame(predictions, columns=["Cluster"]))
+    # TRAINING PART
 
+    # Drop 'User Information' column from the dataset
+    df_cyber_processed = df_cyber_processed.drop(columns=['User Information'], errors='ignore')
+
+    # Separate the features and the target variable.
+    # 'Attack Type' is our target, so we drop it from features.
+    X = df_cyber_processed.drop('Attack Type', axis=1)  # Features: all columns except 'Attack Type'
+    y = df_cyber_processed['Attack Type']  # Target: the 'Attack Type' column
+
+    # Split the data into training and testing sets.
+    # test_size=0.3 means 30% of the data is used for testing.
+    # random_state ensures the split is reproducible.
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+
+    # # Print the shapes of the resulting datasets to confirm the split.
+    # st.write("\nData Splitting Results:")
+    # print("Training set shape (features):", X_train.shape)
+    # print("Training set shape (target):", y_train.shape)
+    # print("Testing set shape (features):", X_test.shape)
+    # print("Testing set shape (target):", y_test.shape)
 
 
     # MODELING PART
 
     # creation of tabs
-    tab1, tab2, tab3 = st.tabs(["HDBSCAN", "model 2", "model 3"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "Logistic Regression",
+        "K-Nearest Neighbors",
+        "Support Vector Machine",
+        "model 4",
+        "model 5"
+    ])
 
     with tab1:
+        st.title("Logistic Regression")
 
-        # Define the target variable and features
-        target = 'Attack Type'
-        features = df_cyber_processed.drop(columns=[target])
+        # Load the trained model from a pickle file
+        model_filename = 'WebApp/trained_models/logistic_regression_model.pkl'  # Update this path to your .pkl file
+        with open(model_filename, 'rb') as file:
+            model = pickle.load(file)
 
-        # Identify categorical and numerical columns
-        categorical_cols = features.select_dtypes(include=['object']).columns.tolist()
-        numerical_cols = features.select_dtypes(exclude=['object']).columns.tolist()
+        # Predict on the test data
+        y_pred = model.predict(X_test)
 
-        # Encoding categorical features using Label Encoding
-        label_encoders = {col: LabelEncoder() for col in categorical_cols}
-        for col in categorical_cols:
-            features[col] = label_encoders[col].fit_transform(features[col])
+        # Calculate accuracy
+        acc = accuracy_score(y_test, y_pred)
 
-        # Normalizing numerical features using StandardScaler
-        scaler = StandardScaler()
-        features[numerical_cols] = scaler.fit_transform(features[numerical_cols])
+        st.subheader("Model Performance Metrics")
 
-        # Convert features to numpy array for HDBSCAN
-        X = features.to_numpy()
+        # Display model performance metrics
+        st.metric(label="Accuracy", value=f"{acc:.2%}")
 
-        # Create an instance of HDBSCAN
-        hdbscan_model = hdbscan.HDBSCAN(min_cluster_size=2, min_samples=1)
-
-        # Fit the model
-        clusters = hdbscan_model.fit_predict(X)
-
-        # Add the cluster labels to the original DataFrame
-        df_cyber_processed['Cluster'] = clusters
-
-        # Map clusters to the most common Attack_Type
-        cluster_mapping = df_cyber_processed.groupby('Cluster')[target].agg(
-            lambda x: x.value_counts().index[0]).reset_index()
-        cluster_mapping.columns = ['Cluster', 'Predicted_Attack_Type']
-
-        # Create a mapping dictionary
-        cluster_to_attack = dict(zip(cluster_mapping['Cluster'], cluster_mapping['Predicted_Attack_Type']))
-
-        # Assign predicted Attack_Type based on clusters
-        df_cyber_processed['Predicted_Attack_Type'] = df_cyber_processed['Cluster'].map(cluster_to_attack)
-
-        # RESULT PART
-
-        # Evaluating the model
-        st.header("Model Performance Metrics")
-        accuracy = accuracy_score(df_cyber_processed[target], df_cyber_processed['Predicted_Attack_Type'])
-        st.metric("Accuracy", f"{accuracy:.2%}")
-
-        # Parsing classification report into a DataFrame
-        report_dict = classification_report(
-            df_cyber_processed[target],
-            df_cyber_processed['Predicted_Attack_Type'],
-            output_dict=True
-        )
-
-        # Converting dictionary to DataFrame
+        # Show classification report as a DataFrame
+        report_dict = classification_report(y_test, y_pred, output_dict=True)
         df_report = pd.DataFrame(report_dict).transpose()
 
-        # Displaying key metrics
-        st.subheader("HDBSCAN Classification Report")
-
-        # Displaying report as a table
-        with st.expander("View Full Report"):
+        with st.expander("Classification Report:"):
             st.dataframe(df_report.style.background_gradient(cmap='Blues', subset=['precision', 'recall', 'f1-score']))
 
+        st.write("---")
 
     with tab2:
-        st.text("model 2")
+        st.title("K-Nearest Neighbors")
+
+        # Load the trained model from a pickle file
+        model_filename = 'WebApp/trained_models/k-nearest_neighbors_model.pkl'  # Update this path to your .pkl file
+        with open(model_filename, 'rb') as file:
+            model = pickle.load(file)
+
+        # Predict on the test data
+        y_pred = model.predict(X_test)
+
+        # Calculate accuracy
+        acc = accuracy_score(y_test, y_pred)
+
+        st.subheader("Model Performance Metrics")
+
+        # Display model performance metrics
+        st.metric(label="Accuracy", value=f"{acc:.2%}")
+
+        # Show classification report as a DataFrame
+        report_dict = classification_report(y_test, y_pred, output_dict=True)
+        df_report = pd.DataFrame(report_dict).transpose()
+
+        with st.expander("Classification Report:"):
+            st.dataframe(df_report.style.background_gradient(cmap='Blues', subset=['precision', 'recall', 'f1-score']))
+
+        st.write("---")
+
 
     with tab3:
-        st.text("model 3")
+        st.title("Support Vector Machine")
+
+        # Load the trained model from a pickle file
+        model_filename = 'WebApp/trained_models/support_vector_machine_model.pkl'  # Update this path to your .pkl file
+        with open(model_filename, 'rb') as file:
+            model = pickle.load(file)
+
+        # Predict on the test data
+        y_pred = model.predict(X_test)
+
+        # Calculate accuracy
+        acc = accuracy_score(y_test, y_pred)
+
+        st.subheader("Model Performance Metrics")
+
+        # Display model performance metrics
+        st.metric(label="Accuracy", value=f"{acc:.2%}")
+
+        # Show classification report as a DataFrame
+        report_dict = classification_report(y_test, y_pred, output_dict=True)
+        df_report = pd.DataFrame(report_dict).transpose()
+
+        with st.expander("Classification Report:"):
+            st.dataframe(df_report.style.background_gradient(cmap='Blues', subset=['precision', 'recall', 'f1-score']))
+
+        st.write("---")
+
+
+
+    with tab4:
+        st.text("model 4 for CLUSTER")
+
+
+    with tab5:
+        st.text("BEST CLUSTER MODEL : HDBSCAN")
