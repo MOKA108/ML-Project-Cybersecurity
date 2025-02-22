@@ -202,7 +202,7 @@ if uploaded_file is not None:
         # RESULT PART
 
         # Evaluating the model
-        st.header("Model Performance Metrics")
+        st.subheader("Model Performance Metrics")
         accuracy = accuracy_score(df_cyber_processed[target], df_cyber_processed['Predicted_Attack_Type'])
         st.metric("Accuracy", f"{accuracy:.2%}")
 
@@ -216,11 +216,8 @@ if uploaded_file is not None:
         # Converting dictionary to DataFrame
         df_report = pd.DataFrame(report_dict).transpose()
 
-        # Displaying key metrics
-        st.subheader("HDBSCAN Classification Report")
-
         # Displaying report as a table
-        with st.expander("View Full Report"):
+        with st.expander("Classification Report"):
             st.dataframe(df_report.style.background_gradient(cmap='Blues', subset=['precision', 'recall', 'f1-score']))
 
         st.write("---")
