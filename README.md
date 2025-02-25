@@ -15,13 +15,6 @@ How to use the app:
 4) drop the csv file in the dropbox and explore the models
 
 
-The team working on this project is composed of:
-
-- 2 Data Scientists: Yasmine El khdar, Gaia Bianciotto
-- 1 Data Engineer: Marie-Caroline Bertheau
-- 3 Data Analysts: Giti Shekari, Aubain Kokou Viglo, Anthony Baudchon
-
-
 The project include:
 
 - a Jupyter Notebook to analyse the dataset cybersecurity_attack.csv and train the best ML model to predict the Attack Types
@@ -37,3 +30,10 @@ The Jupyter Notebook include 4 parts:
 - Feature Engineering
 - Encoding
 - Modeling
+
+
+The team working on this project is composed of:
+
+- 2 Data Scientists: Yasmine El khdar, Gaia Bianciotto
+- 1 Data Engineer: Marie-Caroline Bertheau
+- 3 Data Analysts: Giti Shekari, Aubain Kokou Viglo, Anthony Baudchon
