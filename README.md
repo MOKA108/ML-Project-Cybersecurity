@@ -9,10 +9,10 @@ You can find the app files in the folder "WebApp"
 Here is the Web Application we created: https://cybersecurity-attack-type-prediction.streamlit.app/
 
 How to use the app:
-a. go inside the folder MLmodel
-b. download the file Encoded_Cybersecurity_Data.csv
-c. open the app
-d. drop the csv file in the dropbox and explore the models
+1) inside the folder MLmodel
+2) download the file Encoded_Cybersecurity_Data.csv
+3) open the app
+4) drop the csv file in the dropbox and explore the models
 
 
 The team working on this project is composed of:
@@ -37,3 +37,4 @@ The Jupyter Notebook include 4 parts:
 - Feature Engineering
 - Encoding
 - Modeling
+
