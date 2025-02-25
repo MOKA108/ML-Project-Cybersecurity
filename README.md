@@ -8,6 +8,12 @@ You can find the app files in the folder "WebApp"
 
 Here is the Web Application we created: https://cybersecurity-attack-type-prediction.streamlit.app/
 
+How to use the app:
+1. go inside the folder MLmodel
+2. download the file Encoded_Cybersecurity_Data.csv
+3. open the app
+4. drop the csv file in the dropbox and explore the models
+
 
 The team working on this project is composed of:
 
