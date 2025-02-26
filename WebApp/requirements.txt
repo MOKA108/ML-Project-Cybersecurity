@@ -24,6 +24,7 @@ matplotlib==3.10.0
 mdurl==0.1.2
 narwhals==1.25.0
 numpy==2.2.2
+nvidia-nccl-cu12==2.25.1
 packaging==24.2
 pandas==2.2.3
 pillow==11.1.0
@@ -51,3 +52,4 @@ typing_extensions==4.12.2
 tzdata==2025.1
 urllib3==2.3.0
 watchdog==6.0.0
+xgboost==2.1.4
