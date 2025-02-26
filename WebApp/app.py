@@ -2,7 +2,10 @@ import streamlit as st
 import pandas as pd
 import pickle
 import hdbscan
+import hashlib
+import os
 
+from xgboost import XGBClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import LabelEncoder, StandardScaler
@@ -12,26 +15,49 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+# Create a directory to store precomputed cluster results
+PRECOMPUTED_DIR = "WebApp/precomputed_clusters"
+os.makedirs(PRECOMPUTED_DIR, exist_ok=True)
+
+# Function to generate a unique hash for a dataset
+def get_data_hash(df):
+    """Generate a hash for the dataset to check if it has been processed before."""
+    return hashlib.md5(pd.util.hash_pandas_object(df, index=True).values).hexdigest()
+
+# Function to load precomputed clusters
+def load_precomputed_clusters(data_hash):
+    """Check if precomputed clusters exist for the dataset."""
+    file_path = os.path.join(PRECOMPUTED_DIR, f"{data_hash}.pkl")
+    if os.path.exists(file_path):
+        return pd.read_pickle(file_path)
+    return None
+
+# Function to save computed clusters
+def save_precomputed_clusters(df, data_hash):
+    """Save cluster assignments to avoid recomputation."""
+    file_path = os.path.join(PRECOMPUTED_DIR, f"{data_hash}.pkl")
+    df.to_pickle(file_path)
+
+
+
 # PRESENTATION PART
-
-# creating the title of the app (Streamlit UI)
 st.title("Cybersecurity Attack Type Prediction ML Model")
-st.header("CSV File Importer")
+st.header("Upload your CSV file to know the best model for predicting the attack type")
 
-# Creating a file uploader widget
-uploaded_file = st.file_uploader("Upload a CSV file to predict the attack type.", type="csv")
+# File uploader widget for the user to drop the cvs file
+uploaded_file = st.file_uploader(
+    "Please make sure to drop your dataset (.csv) already processed with Feature Engineering, encoded and normalized:",
+    type="csv"
+)
 
-# Loading the trained model
-# model = pickle.load(open('trained_hdbscan_model.pkl', 'rb'))
 
 # Checking if a file has been uploaded
 if uploaded_file is not None:
+
     # Reading the CSV file into a DataFrame
     df_cyber_processed = pd.read_csv(uploaded_file)
-
-    # Displaying the DataFrame
-    st.write("Dataset preview:")
-    st.dataframe(df_cyber_processed)
+    st.write("Processed Dataset preview:")
+    st.dataframe(df_cyber_processed.head(25))
 
 
     # TRAINING PART
@@ -60,12 +86,11 @@ if uploaded_file is not None:
     # MODELING PART
 
     # creation of tabs for each model
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab4, tab5 = st.tabs([
         "Logistic Regression",
         "K-Nearest Neighbors",
-        "Support Vector Machine",
         "HDBSCAN",
-        "model 5"
+        "HDBSCAN & XgBoost"
     ])
 
     with tab1:
@@ -96,6 +121,7 @@ if uploaded_file is not None:
 
         st.write("---")
 
+
     with tab2:
         st.title("K-Nearest Neighbors")
 
@@ -125,103 +151,162 @@ if uploaded_file is not None:
         st.write("---")
 
 
-    with tab3:
-        st.title("Support Vector Machine")
-
-        # Load the trained model from a pickle file
-        model_filename = 'WebApp/trained_models/support_vector_machine_model.pkl'  # Update this path to your .pkl file
-        with open(model_filename, 'rb') as file:
-            model = pickle.load(file)
-
-        # Predict on the test data
-        y_pred = model.predict(X_test_1)
-
-        # Calculate accuracy
-        acc = accuracy_score(y_test_1, y_pred)
-
-        st.subheader("Model Performance Metrics")
-
-        # Display model performance metrics
-        st.metric(label="Accuracy", value=f"{acc:.2%}")
-
-        # Show classification report as a DataFrame
-        report_dict = classification_report(y_test_1, y_pred, output_dict=True)
-        df_report = pd.DataFrame(report_dict).transpose()
-
-        with st.expander("Classification Report:"):
-            st.dataframe(df_report.style.background_gradient(cmap='Blues', subset=['precision', 'recall', 'f1-score']))
-
-        st.write("---")
-
-
-
     with tab4:
         st.title("HDBSCAN")
 
-        # Load trained HDBSCAN model
-        with open("WebApp/trained_models/hdbscan_model.pkl", "rb") as model_file:
-            hdbscan_model = pickle.load(model_file)
-
-        # Define the target variable and features
+        # Define target and features
         target = 'Attack Type'
-        features = df_cyber_processed.drop(columns=[target])
+        X = df_cyber_processed.drop(columns=[target])  # Features
+        y = df_cyber_processed[target]  # Target
 
-        # Identify categorical and numerical columns
-        categorical_cols = features.select_dtypes(include=['object']).columns.tolist()
-        numerical_cols = features.select_dtypes(exclude=['object']).columns.tolist()
+        # Generate dataset hash
+        data_hash = get_data_hash(X)
 
-        # Encoding categorical features using Label Encoding
-        label_encoders = {col: LabelEncoder() for col in categorical_cols}
-        for col in categorical_cols:
-            features[col] = label_encoders[col].fit_transform(features[col])
+        # Check if clusters were already computed for this dataset
+        precomputed_data = load_precomputed_clusters(data_hash)
 
-        # Normalizing numerical features using StandardScaler
-        scaler = StandardScaler()
-        features[numerical_cols] = scaler.fit_transform(features[numerical_cols])
+        if precomputed_data is not None:
+            df_cyber_processed = precomputed_data
+            is_precomputed = True
+        else:
+            is_precomputed = False
 
-        # Convert features to numpy array for HDBSCAN
-        X = features.to_numpy()
+            # Loading trained HDBSCAN model
+            with open("WebApp/trained_models/hdbscan_model.pkl", "rb") as model_file:
+                hdbscan_model = pickle.load(model_file)
 
-        # Predict clusters using the trained model
-        clusters = hdbscan_model.fit_predict(X)
+            # Identify categorical and numerical columns
+            categorical_cols = X.select_dtypes(include=['object']).columns.tolist()
+            numerical_cols = X.select_dtypes(exclude=['object']).columns.tolist()
 
-        # Add the cluster labels to the original DataFrame
-        df_cyber_processed['Cluster'] = clusters
+            # Encoding categorical features
+            label_encoders = {col: LabelEncoder() for col in categorical_cols}
+            for col in categorical_cols:
+                X[col] = label_encoders[col].fit_transform(X[col])
 
-        # Map clusters to the most common Attack_Type
-        cluster_mapping = df_cyber_processed.groupby('Cluster')[target].agg(
-            lambda x: x.value_counts().index[0]).reset_index()
-        cluster_mapping.columns = ['Cluster', 'Predicted_Attack_Type']
+            # Normalize numerical features
+            scaler = StandardScaler()
+            X[numerical_cols] = scaler.fit_transform(X[numerical_cols])
 
-        # Create a mapping dictionary
-        cluster_to_attack = dict(zip(cluster_mapping['Cluster'], cluster_mapping['Predicted_Attack_Type']))
+            # Convert to numpy array for HDBSCAN
+            X_array = X.to_numpy()
 
-        # Assign predicted Attack_Type based on clusters
-        df_cyber_processed['Predicted_Attack_Type'] = df_cyber_processed['Cluster'].map(cluster_to_attack)
+            # Predict clusters using the trained model
+            clusters = hdbscan_model.fit_predict(X_array)
+            df_cyber_processed['Cluster'] = clusters
 
-        # RESULT PART
+            # Map clusters to the most common Attack_Type
+            cluster_mapping = df_cyber_processed.groupby('Cluster')[target].agg(lambda x: x.mode()[0]).reset_index()
+            cluster_mapping.columns = ['Cluster', 'Predicted_Attack_Type']
 
-        # Evaluating the model
+            # Apply mapping
+            cluster_to_attack = dict(zip(cluster_mapping['Cluster'], cluster_mapping['Predicted_Attack_Type']))
+            df_cyber_processed['Predicted_Attack_Type'] = df_cyber_processed['Cluster'].map(cluster_to_attack)
+
+            # Save precomputed clusters for future use
+            save_precomputed_clusters(df_cyber_processed, data_hash)
+
+        # Model performance evaluation
         st.subheader("Model Performance Metrics")
         accuracy = accuracy_score(df_cyber_processed[target], df_cyber_processed['Predicted_Attack_Type'])
         st.metric("Accuracy", f"{accuracy:.2%}")
 
-        # Parsing classification report into a DataFrame
-        report_dict = classification_report(
-            df_cyber_processed[target],
-            df_cyber_processed['Predicted_Attack_Type'],
-            output_dict=True
-        )
-
-        # Converting dictionary to DataFrame
+        report_dict = classification_report(df_cyber_processed[target], df_cyber_processed['Predicted_Attack_Type'],
+                                            output_dict=True)
         df_report = pd.DataFrame(report_dict).transpose()
 
-        # Displaying report as a table
         with st.expander("Classification Report"):
             st.dataframe(df_report.style.background_gradient(cmap='Blues', subset=['precision', 'recall', 'f1-score']))
+
+        # Alert to say if we used precomputed clusters or if we have to recompute clusters
+        message_placeholder = st.empty()
+
+        if is_precomputed:
+            message_placeholder.success("Using precomputed cluster results!")
+        else:
+            message_placeholder.warning("Computing clusters... This might take a few moments.")
 
         st.write("---")
 
 
     with tab5:
-        st.text("BEST CLUSTER MODEL : HDBSCAN+XBOOST")
+        st.title("HDBSCAN & XGBoost")
+        #
+        # # Assume X_train and y_train are already defined
+        # # Define selected features for XGBoost
+        # selected_features = [f for f in ['Anomaly Category', 'Time of Day', 'City', 'State'] if
+        #                      f in X_train.columns]
+        #
+        # cluster_models = {}
+        # cluster_predictions = []
+        #
+        # # Add the target column ('Attack Type') to the training data with clusters
+        # X_train['Attack Type'] = y_train
+        #
+        # # Iterate over unique clusters in the training dataset
+        # for cluster_id in X_train['Cluster'].unique():
+        #     if cluster_id == -1:  # Skip noise cluster
+        #         continue
+        #
+        #     # Subset training data for the cluster
+        #     cluster_train_data = X_train[X_train['Cluster'] == cluster_id]
+        #
+        #     # Ensure selected features are available in the data
+        #     cluster_features = [feature for feature in selected_features if feature in cluster_train_data.columns]
+        #
+        #     # Split features and target for training
+        #     X_cluster_train = cluster_train_data[cluster_features]
+        #     y_cluster_train = cluster_train_data['Attack Type']  # Target column
+        #
+        #     # Check if there is enough data in the cluster
+        #     if len(X_cluster_train) < 8:
+        #         st.warning(f"Skipping cluster {cluster_id} due to insufficient data.")
+        #         continue
+        #
+        #     # Encode target labels
+        #     label_encoder = LabelEncoder()
+        #     y_cluster_train_encoded = label_encoder.fit_transform(y_cluster_train)
+        #
+        #     # Train XGBoost model for this cluster
+        #     model = XGBClassifier(eval_metric='logloss', random_state=42)
+        #     model.fit(X_cluster_train, y_cluster_train_encoded)
+        #
+        #     # Store the trained model and label encoder
+        #     cluster_models[cluster_id] = {
+        #         'model': model,
+        #         'label_encoder': label_encoder
+        #     }
+        #
+        #     # Make predictions on the training data for this cluster
+        #     cluster_preds = model.predict(X_cluster_train)
+        #
+        #     # Decode predictions back to original labels
+        #     cluster_preds_decoded = label_encoder.inverse_transform(cluster_preds)
+        #     cluster_predictions.extend(zip(cluster_train_data.index, cluster_preds_decoded))
+        #
+        # # Store predictions as a DataFrame
+        # cluster_predictions_df = pd.DataFrame(cluster_predictions, columns=['Index', 'Predicted Attack Type'])
+        # cluster_predictions_df.set_index('Index', inplace=True)
+        #
+        # # Merge predictions back with the original dataset (if needed)
+        # X_train_with_predictions = X_train.copy()
+        # X_train_with_predictions['Predicted Attack Type'] = cluster_predictions_df['Predicted Attack Type']
+        #
+        # # Streamlit display of final predictions
+        # st.write("Final Predictions:")
+        # st.dataframe(X_train_with_predictions[['Cluster', 'Attack Type', 'Predicted Attack Type']].head())
+        #
+        # # Add predictions back to the DataFrame
+        # predictions_dict = dict(cluster_predictions)
+        # data['Cluster_Predicted_Attack_Type'] = data.index.map(predictions_dict)
+        #
+        # # Handle any NaN values in predictions
+        # data['Cluster_Predicted_Attack_Type'].fillna(data['Attack Type'].mode()[0], inplace=True)
+        #
+        # # Evaluate overall accuracy and classification report
+        # accuracy = accuracy_score(data['Attack Type'], data['Cluster_Predicted_Attack_Type'])
+        # st.write(f"Cluster-Specific Features Overall Accuracy: {accuracy:.5f}")
+        #
+        # # Display classification report
+        # classification_report_output = classification_report(data['Attack Type'], data['Cluster_Predicted_Attack_Type'])
+        # st.text("Classification Report:\n" + classification_report_output)
