@@ -15,6 +15,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+# OPTIMIZATION to make the app faster to load data
+
 # Create a directory to store precomputed cluster results
 PRECOMPUTED_DIR = "WebApp/precomputed_clusters"
 os.makedirs(PRECOMPUTED_DIR, exist_ok=True)
@@ -56,6 +58,12 @@ if uploaded_file is not None:
 
     # Reading the CSV file into a DataFrame
     df_cyber_processed = pd.read_csv(uploaded_file)
+
+    # If only one column, try reading with semicolon delimiter
+    if df_cyber_processed.shape[1] == 1:
+        uploaded_file.seek(0)  # Reset file pointer
+        df_cyber_processed = pd.read_csv(uploaded_file, delimiter=";")
+
     st.write("Processed Dataset preview:")
     st.dataframe(df_cyber_processed.head(25))
 
