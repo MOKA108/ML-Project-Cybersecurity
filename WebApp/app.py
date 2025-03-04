@@ -5,11 +5,14 @@ import hdbscan
 import hashlib
 import os
 
-from xgboost import XGBClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.metrics import classification_report, accuracy_score
+from sklearn.feature_selection import SelectKBest, f_classif
+from sklearn.decomposition import PCA
+
+from xgboost import XGBClassifier
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -94,11 +97,11 @@ if uploaded_file is not None:
     # MODELING PART
 
     # creation of tabs for each model
-    tab1, tab2, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4 = st.tabs([
         "Logistic Regression",
         "K-Nearest Neighbors",
         "HDBSCAN",
-        "HDBSCAN & XgBoost"
+        "HDBSCAN & XGBoost"
     ])
 
     with tab1:
@@ -159,7 +162,7 @@ if uploaded_file is not None:
         st.write("---")
 
 
-    with tab4:
+    with tab3:
         st.title("HDBSCAN")
 
         # Define target and features
@@ -237,84 +240,162 @@ if uploaded_file is not None:
         st.write("---")
 
 
-    with tab5:
+    with tab4:
         st.title("HDBSCAN & XGBoost")
-        #
-        # # Assume X_train and y_train are already defined
-        # # Define selected features for XGBoost
-        # selected_features = [f for f in ['Anomaly Category', 'Time of Day', 'City', 'State'] if
-        #                      f in X_train.columns]
-        #
-        # cluster_models = {}
-        # cluster_predictions = []
-        #
-        # # Add the target column ('Attack Type') to the training data with clusters
-        # X_train['Attack Type'] = y_train
-        #
-        # # Iterate over unique clusters in the training dataset
-        # for cluster_id in X_train['Cluster'].unique():
-        #     if cluster_id == -1:  # Skip noise cluster
-        #         continue
-        #
-        #     # Subset training data for the cluster
-        #     cluster_train_data = X_train[X_train['Cluster'] == cluster_id]
-        #
-        #     # Ensure selected features are available in the data
-        #     cluster_features = [feature for feature in selected_features if feature in cluster_train_data.columns]
-        #
-        #     # Split features and target for training
-        #     X_cluster_train = cluster_train_data[cluster_features]
-        #     y_cluster_train = cluster_train_data['Attack Type']  # Target column
-        #
-        #     # Check if there is enough data in the cluster
-        #     if len(X_cluster_train) < 8:
-        #         st.warning(f"Skipping cluster {cluster_id} due to insufficient data.")
-        #         continue
-        #
-        #     # Encode target labels
-        #     label_encoder = LabelEncoder()
-        #     y_cluster_train_encoded = label_encoder.fit_transform(y_cluster_train)
-        #
-        #     # Train XGBoost model for this cluster
-        #     model = XGBClassifier(eval_metric='logloss', random_state=42)
-        #     model.fit(X_cluster_train, y_cluster_train_encoded)
-        #
-        #     # Store the trained model and label encoder
-        #     cluster_models[cluster_id] = {
-        #         'model': model,
-        #         'label_encoder': label_encoder
-        #     }
-        #
-        #     # Make predictions on the training data for this cluster
-        #     cluster_preds = model.predict(X_cluster_train)
-        #
-        #     # Decode predictions back to original labels
-        #     cluster_preds_decoded = label_encoder.inverse_transform(cluster_preds)
-        #     cluster_predictions.extend(zip(cluster_train_data.index, cluster_preds_decoded))
-        #
-        # # Store predictions as a DataFrame
-        # cluster_predictions_df = pd.DataFrame(cluster_predictions, columns=['Index', 'Predicted Attack Type'])
-        # cluster_predictions_df.set_index('Index', inplace=True)
-        #
-        # # Merge predictions back with the original dataset (if needed)
-        # X_train_with_predictions = X_train.copy()
-        # X_train_with_predictions['Predicted Attack Type'] = cluster_predictions_df['Predicted Attack Type']
-        #
-        # # Streamlit display of final predictions
-        # st.write("Final Predictions:")
-        # st.dataframe(X_train_with_predictions[['Cluster', 'Attack Type', 'Predicted Attack Type']].head())
-        #
-        # # Add predictions back to the DataFrame
-        # predictions_dict = dict(cluster_predictions)
-        # data['Cluster_Predicted_Attack_Type'] = data.index.map(predictions_dict)
-        #
-        # # Handle any NaN values in predictions
-        # data['Cluster_Predicted_Attack_Type'].fillna(data['Attack Type'].mode()[0], inplace=True)
-        #
-        # # Evaluate overall accuracy and classification report
-        # accuracy = accuracy_score(data['Attack Type'], data['Cluster_Predicted_Attack_Type'])
-        # st.write(f"Cluster-Specific Features Overall Accuracy: {accuracy:.5f}")
-        #
-        # # Display classification report
-        # classification_report_output = classification_report(data['Attack Type'], data['Cluster_Predicted_Attack_Type'])
-        # st.text("Classification Report:\n" + classification_report_output)
+
+    # Feature Selection with SelectKBest & f_classif
+        # Step 1: Apply SelectKBest on the Training Set
+        # Use f_classif to compute ANOVA F-values between features and the target
+        best_features = SelectKBest(score_func=f_classif, k='all')
+        best_features.fit(X_train, y_train)  # Use training set for feature selection
+
+        # Step 2: Get Feature Scores
+        feature_scores = best_features.scores_
+        feature_names = X_train.columns
+
+        # Create a DataFrame to visualize feature scores
+        feature_scores_df = pd.DataFrame({
+            'Feature': feature_names,
+            'Score': feature_scores
+        }).sort_values(by='Score', ascending=False)
+
+        # Step 3: Select Top Features
+        # Example: Keep the top 10 features
+        top_features = feature_scores_df.head(10)['Feature'].tolist()
+        X_train_top_features = X_train[top_features]
+        X_val_top_features = X_val[top_features]
+        X_test_top_features = X_test[top_features]
+
+
+    # Clustering with HDBSCAN and PCA
+        # Step 1: Select top features for clustering (using training data only)
+        top_features = [f for f in feature_scores_df['Feature'].head(5).values if f != 'Attack Type']
+        X_train_top_features = X_train[top_features]
+
+        # Apply HDBSCAN clustering on the training set
+        hdbscan_model = hdbscan.HDBSCAN(
+            min_cluster_size=10,  # Slightly smaller clusters
+            min_samples=2,  # Include more points in clusters
+            metric='euclidean',  # Try a different distance metric
+            cluster_selection_method='eom'  # 'leaf' for more granular clusters
+        )
+
+        # X_train['Cluster'] = hdbscan_model.fit_predict(X_train)
+        # Fit HDBSCAN on the top features
+        train_cluster_labels = hdbscan_model.fit_predict(X_train_top_features)
+
+        # Step 3: Add the new cluster labels to the training data
+        X_train_with_clusters = X_train.copy()
+        X_train_with_clusters['Cluster'] = train_cluster_labels
+
+        # Step 4: Analyze the new cluster distribution
+        cluster_distribution = pd.Series(train_cluster_labels).value_counts()
+
+        # Step 6: Visualize clusters in PCA-reduced dimensions
+        pca = PCA(n_components=2)
+        X_train_pca = pca.fit_transform(X_train_top_features)
+
+        # Step 7: Prepare validation and test sets
+        X_val_top_features = X_val[top_features]
+        X_test_top_features = X_test[top_features]
+
+        # Add placeholder cluster column for validation and test sets
+        X_val_with_clusters = X_val.copy()
+        X_test_with_clusters = X_test.copy()
+
+        X_val_with_clusters['Cluster'] = -1  # Placeholder for validation
+        X_test_with_clusters['Cluster'] = -1  # Placeholder for test
+
+
+    # Cluster-Based XGBoost Classification with Label Encoding
+        # Define selected features for XGBoost
+        selected_features = [f for f in ['Anomaly Category', 'Time of Day', 'City', 'State'] if
+                             f in X_train.columns]
+
+        cluster_models = {}
+        cluster_predictions = []
+
+        # Add the target column ('Attack Type') to the training data with clusters
+        X_train_with_clusters['Attack Type'] = y_train
+
+        # Iterate over unique clusters in the training dataset
+        for cluster_id in X_train_with_clusters['Cluster'].unique():
+            if cluster_id == -1:  # Skip noise cluster
+                continue
+
+            # Subset training data for the cluster
+            cluster_train_data = X_train_with_clusters[X_train_with_clusters['Cluster'] == cluster_id]
+
+            # Ensure selected features are available in the data
+            cluster_features = [feature for feature in selected_features if feature in cluster_train_data.columns]
+
+            # Split features and target for training
+            X_cluster_train = cluster_train_data[cluster_features]
+            y_cluster_train = cluster_train_data['Attack Type']  # Target column
+
+            # Check if there is enough data in the cluster
+            if len(X_cluster_train) < 8:
+                print(f"Skipping cluster {cluster_id} due to insufficient data.")
+                continue
+
+            # Encode target labels
+            label_encoder = LabelEncoder()
+            y_cluster_train_encoded = label_encoder.fit_transform(y_cluster_train)
+
+            # Train XGBoost model for this cluster
+            model = XGBClassifier(eval_metric='logloss', random_state=42)
+            model.fit(X_cluster_train, y_cluster_train_encoded)
+
+            # Store the trained model and label encoder
+            cluster_models[cluster_id] = {
+                'model': model,
+                'label_encoder': label_encoder
+            }
+
+            # Make predictions on the training data for this cluster
+            cluster_preds = model.predict(X_cluster_train)
+
+            # Decode predictions back to original labels
+            cluster_preds_decoded = label_encoder.inverse_transform(cluster_preds)
+            cluster_predictions.extend(zip(cluster_train_data.index, cluster_preds_decoded))
+
+        # Store predictions as a DataFrame
+        cluster_predictions_df = pd.DataFrame(cluster_predictions, columns=['Index', 'Predicted Attack Type'])
+        cluster_predictions_df.set_index('Index', inplace=True)
+
+        # Merge predictions back with the original dataset (if needed)
+        X_train_with_predictions = X_train_with_clusters.copy()
+        X_train_with_predictions['Predicted Attack Type'] = cluster_predictions_df['Predicted Attack Type']
+
+        # Streamlit display of final predictions
+        st.write("Final Predictions:")
+        st.dataframe(X_train_with_predictions[['Cluster', 'Attack Type', 'Predicted Attack Type']].head())
+
+    # RESULT: Evaluating Cluster-Based Classification Performance
+        # Add predictions back to the DataFrame
+        predictions_dict = dict(cluster_predictions)
+        df_cyber_processed['Cluster_Predicted_Attack_Type'] = df_cyber_processed.index.map(predictions_dict)
+
+        # Handle any NaN values in predictions
+        df_cyber_processed['Cluster_Predicted_Attack_Type'].fillna(df_cyber_processed['Attack Type'].mode()[0],
+                                                                   inplace=True)
+
+        # Evaluate overall accuracy and classification report
+        st.subheader("Model Performance Metrics")
+        accuracy = accuracy_score(df_cyber_processed['Attack Type'],
+                                  df_cyber_processed['Cluster_Predicted_Attack_Type'])
+        st.metric("Accuracy", f"{accuracy:.2%}")
+
+        # Display classification report
+        classification_report_output = classification_report(df_cyber_processed['Attack Type'],
+                                                            df_cyber_processed['Cluster_Predicted_Attack_Type'],
+                                                            output_dict=True)
+        df_last_report = pd.DataFrame(classification_report_output).transpose()
+
+        with st.expander("Classification Report"):
+            st.dataframe(df_last_report.style.background_gradient(cmap='Blues', subset=['precision', 'recall', 'f1-score']))
+
+        # Alert to say if we used precomputed clusters or if we have to recompute clusters
+        message_placeholder = st.empty()
+
+        st.write("---")
