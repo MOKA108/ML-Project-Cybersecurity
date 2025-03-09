@@ -27,10 +27,10 @@ How to use the app:
   - a notebook for the EDA, FE, encoding and normalizing parts
   - a notebook with the classification models
   - a notebook dedicated to the clusterization models
-- a Web Application to show result of the model prediction
 - a report explaining the whole project and our decisions
 - a GitHub page (where you are right now!)
-- a video to show a short presentation of the Web Application
+- a Web Application to show result of the model prediction
+- a video to show a short presentation of the application
 
 
 ## Here is the team who worked on it:
