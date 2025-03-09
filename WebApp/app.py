@@ -50,40 +50,77 @@ def save_precomputed_clusters(df, data_hash):
 # Custom CSS for styling
 st.markdown(
     """
-<style>
+    <style>
+        /* Overall background styling */
+        .main {
+            background-color: #0B0C10;
+            color: #C5C6C7;
+            font-family: 'Arial', sans-serif;
+        }
+
+        /* Title box */
         .title-box {
-            background-color: darkgrey;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.15);
+            background: linear-gradient(135deg, #1F2833, #66FCF1);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0px 6px 20px rgba(0, 255, 255, 0.2);
             text-align: center;
-            width: 100%;
-            margin: auto;
+            font-size: 28px;
+            font-weight: bold;
+            color: white;
         }
-        .header {
-            text-align: left;
-            margin-top: 20px;
-            font-size: 20px;
+
+        /* Subtitle */
+        .subtitle {
+            text-align: center;
+            font-size: 18px;
+            font-weight: 500;
+            color: #45A29E;
+            margin-top: 10px;
         }
-</style>
+
+        /* File uploader styling */
+        .stFileUploader {
+            border: 2px dashed #45A29E !important;
+            background-color: rgba(69, 162, 158, 0.1);
+            color: white !important;
+        }
+
+        /* Custom button */
+        .stButton>button {
+            background: linear-gradient(135deg, #45A29E, #66FCF1);
+            color: #0B0C10;
+            font-weight: bold;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            transition: 0.3s;
+        }
+
+        .stButton>button:hover {
+            background: #66FCF1;
+            transform: scale(1.05);
+        }
+
+    </style>
     """,
     unsafe_allow_html=True,
 )
-st.markdown('<div class="title-box"><h1>Cybersecurity Attack Type Prediction ML Model</h1></div>',
+
+# Title with styling
+st.markdown('<div class="title-box">🔐 Cybersecurity Attack Type Prediction ML Model 🔍</div>',
             unsafe_allow_html=True)
 
-space_between = 1
-st.markdown("<br>" * space_between, unsafe_allow_html=True)
-
+# Subtitle
 st.markdown(
-    '<h4 class="header">Upload your CSV file to know the best model for predicting the attack type you are more likely to receive</h4>',
-            unsafe_allow_html=True)
+    '<p class="subtitle">Upload your dataset to identify the best ML model for predicting potential cyber threats.</p>',
+    unsafe_allow_html=True)
 
-st.markdown("<br>" * space_between, unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_html=True) # Space for separation
 
-# File uploader widget for the user to drop the cvs file
+# File uploader with a more engaging instruction
 uploaded_file = st.file_uploader(
-    "Please make sure to drop your dataset (.csv) already processed with Feature Engineering, encoded and normalized:\n",
+    "📂 **Upload your pre-processed CSV file:** (encoded & normalized)",
     type="csv"
 )
 
@@ -120,7 +157,6 @@ if uploaded_file is not None:
                                                                 test_size=0.2, random_state=42, stratify=y)
     X_train, X_val, y_train, y_val = train_test_split(X_train_val, y_train_val,
                                                       test_size=0.25, random_state=42,stratify=y_train_val)
-
 
 
     # MODELING PART
@@ -264,16 +300,19 @@ if uploaded_file is not None:
             # Save precomputed clusters for future use
             save_precomputed_clusters(df_cyber_processed, data_hash)
 
+        # Rename the column for display purposes
+        df_cyber_processed = df_cyber_processed.rename(columns={'Predicted_Attack_Type': 'Predicted Attack Type'})
+
         # Streamlit display of final predictions
         st.subheader("Predictions")
-        st.dataframe(df_cyber_processed[['Cluster', 'Attack Type', 'Predicted_Attack_Type']].head(25))
+        st.dataframe(df_cyber_processed[['Cluster', 'Attack Type', 'Predicted Attack Type']].head(25))
 
         # Model performance evaluation
         st.subheader("Model Performance Metrics")
-        accuracy = accuracy_score(df_cyber_processed[target], df_cyber_processed['Predicted_Attack_Type'])
+        accuracy = accuracy_score(df_cyber_processed[target], df_cyber_processed['Predicted Attack Type'])
         st.metric("Accuracy", f"{accuracy:.2%}")
 
-        report_dict = classification_report(df_cyber_processed[target], df_cyber_processed['Predicted_Attack_Type'],
+        report_dict = classification_report(df_cyber_processed[target], df_cyber_processed['Predicted Attack Type'],
                                             output_dict=True)
         df_report = pd.DataFrame(report_dict).transpose()
 
@@ -367,69 +406,6 @@ if uploaded_file is not None:
             train_cluster_labels = hdbscan_model.fit_predict(X_train_top_features)
 
 
-        # st.title("HDBSCAN & XGBoost")
-        #
-        # # Generate a hash for the dataset
-        # data_hash = get_data_hash(df_cyber_processed)
-        #
-        # # Initialize train_cluster_labels to None
-        # train_cluster_labels = None
-        # X_train_top_features = None
-        #
-        # # Load precomputed clusters if they exist
-        # precomputed_clusters = load_precomputed_clusters(data_hash)
-        #
-        # if precomputed_clusters is not None:
-        #     X_train_with_clusters = precomputed_clusters
-        #     is_precomputed = True
-        # else:
-        #     is_precomputed = False
-        #
-        #     # Feature Selection with SelectKBest & f_classif
-        #     best_features = SelectKBest(score_func=f_classif, k='all')
-        #     best_features.fit(X_train, y_train)
-        #
-        #     # Get Feature Scores
-        #     feature_scores = best_features.scores_
-        #     feature_names = X_train.columns
-        #
-        #     # Create a DataFrame to visualize feature scores
-        #     feature_scores_df = pd.DataFrame({
-        #         'Feature': feature_names,
-        #         'Score': feature_scores
-        #     }).sort_values(by='Score', ascending=False)
-        #
-        #     # Select Top Features
-        #     top_features = feature_scores_df.head(10)['Feature'].tolist()
-        #     X_train_top_features = X_train[top_features]
-        #     X_val_top_features = X_val[top_features]
-        #     X_test_top_features = X_test[top_features]
-        #
-        # # Clustering with HDBSCAN and PCA
-        #     # Step 1: Select top features for clustering (using training data only)
-        #     top_features = [f for f in feature_scores_df['Feature'].head(5).values if f != 'Attack Type']
-        #     X_train_top_features = X_train[top_features]
-        #
-        #     # Clustering with HDBSCAN
-        #     hdbscan_model = hdbscan.HDBSCAN(
-        #         min_cluster_size=10,
-        #         min_samples=2,
-        #         metric='euclidean',
-        #         cluster_selection_method='eom'
-        #     )
-        #
-        #     train_cluster_labels = hdbscan_model.fit_predict(X_train_top_features)
-        #
-        #     # Add the new cluster labels to the training data
-        #     X_train_with_clusters = X_train.copy()
-        #     X_train_with_clusters['Cluster'] = train_cluster_labels
-        #
-        #     # Save computed clusters
-        #     save_precomputed_clusters(X_train_with_clusters, data_hash)
-
-
-###
-
         # Step 4: Analyze the new cluster distribution
         if train_cluster_labels is not None:
             cluster_distribution = pd.Series(train_cluster_labels).value_counts()
@@ -506,8 +482,6 @@ if uploaded_file is not None:
             cluster_predictions.extend(zip(cluster_train_data.index, cluster_preds_decoded))
 
 
-###
-
         # Store predictions as a DataFrame
         cluster_predictions_df = pd.DataFrame(cluster_predictions, columns=['Index', 'Predicted Attack Type'])
         cluster_predictions_df.set_index('Index', inplace=True)
@@ -517,7 +491,7 @@ if uploaded_file is not None:
         X_train_with_predictions['Predicted Attack Type'] = cluster_predictions_df['Predicted Attack Type']
 
         # Streamlit display of final predictions
-        st.write("Predictions")
+        st.subheader("Predictions")
         st.dataframe(X_train_with_predictions[['Cluster', 'Attack Type', 'Predicted Attack Type']].head(25))
 
 
