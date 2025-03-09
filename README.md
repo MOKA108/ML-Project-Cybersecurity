@@ -1,11 +1,11 @@
 # DSTI Python Machine Learning Project
 
 ## Overview
-This project is done in the scope of the DSTI Python ML course. 
-You can find the main project in the folder "MLproject". 
-You can find the app files in the folder "WebApp". 
- 
-
+This project is done in the scope of the DSTI Python ML course.  
+You can find the main project in the folder "MLproject".  
+You can find the app files in the folder "WebApp".  
+  
+  
 Here is the Web Application: https://cybersecurity-attack-type-prediction.streamlit.app/
 
 How to use the app:
