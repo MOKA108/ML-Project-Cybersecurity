@@ -1,9 +1,13 @@
+import os
+import time
+
 import streamlit as st
 import pandas as pd
 import pickle
 import hdbscan
 import hashlib
-import os
+import numpy as np
+import matplotlib.pyplot as plt
 
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
@@ -13,9 +17,6 @@ from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.decomposition import PCA
 
 from xgboost import XGBClassifier
-
-import numpy as np
-import matplotlib.pyplot as plt
 
 
 # OPTIMIZATION to make the app faster to load data
@@ -44,14 +45,45 @@ def save_precomputed_clusters(df, data_hash):
     df.to_pickle(file_path)
 
 
-
 # PRESENTATION PART
-st.title("Cybersecurity Attack Type Prediction ML Model")
-st.header("Upload your CSV file to know the best model for predicting the attack type")
+
+# Custom CSS for styling
+st.markdown(
+    """
+<style>
+        .title-box {
+            background-color: darkgrey;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.15);
+            text-align: center;
+            width: 100%;
+            margin: auto;
+        }
+        .header {
+            text-align: left;
+            margin-top: 20px;
+            font-size: 20px;
+        }
+</style>
+    """,
+    unsafe_allow_html=True,
+)
+st.markdown('<div class="title-box"><h1>Cybersecurity Attack Type Prediction ML Model</h1></div>',
+            unsafe_allow_html=True)
+
+space_between = 1
+st.markdown("<br>" * space_between, unsafe_allow_html=True)
+
+st.markdown(
+    '<h4 class="header">Upload your CSV file to know the best model for predicting the attack type you are more likely to receive</h4>',
+            unsafe_allow_html=True)
+
+st.markdown("<br>" * space_between, unsafe_allow_html=True)
 
 # File uploader widget for the user to drop the cvs file
 uploaded_file = st.file_uploader(
-    "Please make sure to drop your dataset (.csv) already processed with Feature Engineering, encoded and normalized:",
+    "Please make sure to drop your dataset (.csv) already processed with Feature Engineering, encoded and normalized:\n",
     type="csv"
 )
 
@@ -76,17 +108,14 @@ if uploaded_file is not None:
     # we drop 'User Information' column from the dataset
     df_cyber_processed = df_cyber_processed.drop(columns=['User Information'], errors='ignore')
 
-    # Separate the features and the target variable.
-    # 'Attack Type' is our target, so we drop it from features.
-    X = df_cyber_processed.drop('Attack Type', axis=1)  # Features: all columns except 'Attack Type'
-    y = df_cyber_processed['Attack Type']  # Target: the 'Attack Type' column
+    # Separate the features and the target variable
+    X = df_cyber_processed.drop('Attack Type', axis=1)
+    y = df_cyber_processed['Attack Type']
 
-    # For the 3 classic models
-    # we split the data into training and testing sets (test_size=0.2 means 20% of the data is used for testing)
+    # For the 2 classic models
     X_train_1, X_test_1, y_train_1, y_test_1 = train_test_split(X, y, test_size=0.2, random_state=42)
 
     # For the 2 cluster models
-    # we split the data into train, test, and validation sets
     X_train_val, X_test, y_train_val, y_test = train_test_split(X, y,
                                                                 test_size=0.2, random_state=42, stratify=y)
     X_train, X_val, y_train, y_val = train_test_split(X_train_val, y_train_val,
@@ -115,12 +144,21 @@ if uploaded_file is not None:
         # Predict on the test data
         y_pred = model.predict(X_test_1)
 
+        # DataFrame to show actual vs predicted values
+        df_predictions = pd.DataFrame({
+            'Actual Attack Type': y_test_1,
+            'Predicted Attack Type': y_pred
+        })
+
+        # Display the predictions in Streamlit
+        st.subheader("Predictions")
+        st.dataframe(df_predictions.head(25))
+
         # Calculate accuracy
         acc = accuracy_score(y_test_1, y_pred)
 
-        st.subheader("Model Performance Metrics")
-
         # Display model performance metrics
+        st.subheader("Model Performance Metrics")
         st.metric(label="Accuracy", value=f"{acc:.2%}")
 
         # Show classification report as a DataFrame
@@ -144,12 +182,21 @@ if uploaded_file is not None:
         # Predict on the test data
         y_pred = model.predict(X_test_1)
 
+        # DataFrame to show actual vs predicted values
+        df_predictions = pd.DataFrame({
+            'Actual Attack Type': y_test_1,
+            'Predicted Attack Type': y_pred
+        })
+
+        # Display the predictions in Streamlit
+        st.subheader("Predictions")
+        st.dataframe(df_predictions.head(25))
+
         # Calculate accuracy
         acc = accuracy_score(y_test_1, y_pred)
 
-        st.subheader("Model Performance Metrics")
-
         # Display model performance metrics
+        st.subheader("Model Performance Metrics")
         st.metric(label="Accuracy", value=f"{acc:.2%}")
 
         # Show classification report as a DataFrame
@@ -183,7 +230,7 @@ if uploaded_file is not None:
             is_precomputed = False
 
             # Loading trained HDBSCAN model
-            with open("WebApp/trained_models/hdbscan_model.pkl", "rb") as model_file:
+            with open("WebApp/trained_models/best_hdbscan_model.pkl", "rb") as model_file:
                 hdbscan_model = pickle.load(model_file)
 
             # Identify categorical and numerical columns
@@ -217,6 +264,10 @@ if uploaded_file is not None:
             # Save precomputed clusters for future use
             save_precomputed_clusters(df_cyber_processed, data_hash)
 
+        # Streamlit display of final predictions
+        st.subheader("Predictions")
+        st.dataframe(df_cyber_processed[['Cluster', 'Attack Type', 'Predicted_Attack_Type']].head(25))
+
         # Model performance evaluation
         st.subheader("Model Performance Metrics")
         accuracy = accuracy_score(df_cyber_processed[target], df_cyber_processed['Predicted_Attack_Type'])
@@ -236,6 +287,9 @@ if uploaded_file is not None:
             message_placeholder.success("Using precomputed cluster results!")
         else:
             message_placeholder.warning("Computing clusters... This might take a few moments.")
+
+        time.sleep(5)
+        message_placeholder.empty()
 
         st.write("---")
 
@@ -279,18 +333,25 @@ if uploaded_file is not None:
             X_val_top_features = X_val[top_features]
             X_test_top_features = X_test[top_features]
 
-        # Clustering with HDBSCAN and PCA
+            # Clustering with HDBSCAN and PCA
             # Step 1: Select top features for clustering (using training data only)
             top_features = [f for f in feature_scores_df['Feature'].head(5).values if f != 'Attack Type']
             X_train_top_features = X_train[top_features]
 
-            # Clustering with HDBSCAN
-            hdbscan_model = hdbscan.HDBSCAN(
-                min_cluster_size=10,
-                min_samples=2,
-                metric='euclidean',
-                cluster_selection_method='eom'
-            )
+            # Load HDBSCAN model from pickle file
+            try:
+                with open("WebApp/trained_models/best_hdbscan_model.pkl", "rb") as f:
+                    hdbscan_model = pickle.load(f)
+                    st.success("HDBSCAN model loaded successfully!")
+            except Exception as e:
+                st.error(f"Error loading HDBSCAN model: {e}")
+                # If loading fails, fit a new model
+                hdbscan_model = hdbscan.HDBSCAN(
+                    min_cluster_size=10,
+                    min_samples=2,
+                    metric='euclidean',
+                    cluster_selection_method='eom'
+                )
 
             train_cluster_labels = hdbscan_model.fit_predict(X_train_top_features)
 
@@ -300,6 +361,71 @@ if uploaded_file is not None:
 
             # Save computed clusters
             save_precomputed_clusters(X_train_with_clusters, data_hash)
+
+        # If the model was loaded successfully, use it to predict clusters
+        if 'hdbscan_model' in locals():
+            train_cluster_labels = hdbscan_model.fit_predict(X_train_top_features)
+
+
+        # st.title("HDBSCAN & XGBoost")
+        #
+        # # Generate a hash for the dataset
+        # data_hash = get_data_hash(df_cyber_processed)
+        #
+        # # Initialize train_cluster_labels to None
+        # train_cluster_labels = None
+        # X_train_top_features = None
+        #
+        # # Load precomputed clusters if they exist
+        # precomputed_clusters = load_precomputed_clusters(data_hash)
+        #
+        # if precomputed_clusters is not None:
+        #     X_train_with_clusters = precomputed_clusters
+        #     is_precomputed = True
+        # else:
+        #     is_precomputed = False
+        #
+        #     # Feature Selection with SelectKBest & f_classif
+        #     best_features = SelectKBest(score_func=f_classif, k='all')
+        #     best_features.fit(X_train, y_train)
+        #
+        #     # Get Feature Scores
+        #     feature_scores = best_features.scores_
+        #     feature_names = X_train.columns
+        #
+        #     # Create a DataFrame to visualize feature scores
+        #     feature_scores_df = pd.DataFrame({
+        #         'Feature': feature_names,
+        #         'Score': feature_scores
+        #     }).sort_values(by='Score', ascending=False)
+        #
+        #     # Select Top Features
+        #     top_features = feature_scores_df.head(10)['Feature'].tolist()
+        #     X_train_top_features = X_train[top_features]
+        #     X_val_top_features = X_val[top_features]
+        #     X_test_top_features = X_test[top_features]
+        #
+        # # Clustering with HDBSCAN and PCA
+        #     # Step 1: Select top features for clustering (using training data only)
+        #     top_features = [f for f in feature_scores_df['Feature'].head(5).values if f != 'Attack Type']
+        #     X_train_top_features = X_train[top_features]
+        #
+        #     # Clustering with HDBSCAN
+        #     hdbscan_model = hdbscan.HDBSCAN(
+        #         min_cluster_size=10,
+        #         min_samples=2,
+        #         metric='euclidean',
+        #         cluster_selection_method='eom'
+        #     )
+        #
+        #     train_cluster_labels = hdbscan_model.fit_predict(X_train_top_features)
+        #
+        #     # Add the new cluster labels to the training data
+        #     X_train_with_clusters = X_train.copy()
+        #     X_train_with_clusters['Cluster'] = train_cluster_labels
+        #
+        #     # Save computed clusters
+        #     save_precomputed_clusters(X_train_with_clusters, data_hash)
 
 
 ###
@@ -391,8 +517,8 @@ if uploaded_file is not None:
         X_train_with_predictions['Predicted Attack Type'] = cluster_predictions_df['Predicted Attack Type']
 
         # Streamlit display of final predictions
-        st.write("Final Predictions:")
-        st.dataframe(X_train_with_predictions[['Cluster', 'Attack Type', 'Predicted Attack Type']].head())
+        st.write("Predictions")
+        st.dataframe(X_train_with_predictions[['Cluster', 'Attack Type', 'Predicted Attack Type']].head(25))
 
 
     # RESULT: Evaluating Cluster-Based Classification Performance
@@ -428,166 +554,7 @@ if uploaded_file is not None:
         else:
             message_placeholder.warning("Computing clusters... This might take a few moments.")
 
+        time.sleep(5)
+        message_placeholder.empty()
+
         st.write("---")
-
-
-# previous tab4 version not optimized (without cluster precomputed)
-    # with tab4:
-    #     st.title("HDBSCAN & XGBoost")
-    #
-    # # Feature Selection with SelectKBest & f_classif
-    #     # Step 1: Apply SelectKBest on the Training Set
-    #     # Use f_classif to compute ANOVA F-values between features and the target
-    #     best_features = SelectKBest(score_func=f_classif, k='all')
-    #     best_features.fit(X_train, y_train)  # Use training set for feature selection
-    #
-    #     # Step 2: Get Feature Scores
-    #     feature_scores = best_features.scores_
-    #     feature_names = X_train.columns
-    #
-    #     # Create a DataFrame to visualize feature scores
-    #     feature_scores_df = pd.DataFrame({
-    #         'Feature': feature_names,
-    #         'Score': feature_scores
-    #     }).sort_values(by='Score', ascending=False)
-    #
-    #     # Step 3: Select Top Features
-    #     # Example: Keep the top 10 features
-    #     top_features = feature_scores_df.head(10)['Feature'].tolist()
-    #     X_train_top_features = X_train[top_features]
-    #     X_val_top_features = X_val[top_features]
-    #     X_test_top_features = X_test[top_features]
-    #
-    #
-    # # Clustering with HDBSCAN and PCA
-    #     # Step 1: Select top features for clustering (using training data only)
-    #     top_features = [f for f in feature_scores_df['Feature'].head(5).values if f != 'Attack Type']
-    #     X_train_top_features = X_train[top_features]
-    #
-    #     # Apply HDBSCAN clustering on the training set
-    #     hdbscan_model = hdbscan.HDBSCAN(
-    #         min_cluster_size=10,  # Slightly smaller clusters
-    #         min_samples=2,  # Include more points in clusters
-    #         metric='euclidean',  # Try a different distance metric
-    #         cluster_selection_method='eom'  # 'leaf' for more granular clusters
-    #     )
-    #
-    #     # X_train['Cluster'] = hdbscan_model.fit_predict(X_train)
-    #     # Fit HDBSCAN on the top features
-    #     train_cluster_labels = hdbscan_model.fit_predict(X_train_top_features)
-    #
-    #     # Step 3: Add the new cluster labels to the training data
-    #     X_train_with_clusters = X_train.copy()
-    #     X_train_with_clusters['Cluster'] = train_cluster_labels
-    #
-    #     # Step 4: Analyze the new cluster distribution
-    #     cluster_distribution = pd.Series(train_cluster_labels).value_counts()
-    #
-    #     # Step 6: Visualize clusters in PCA-reduced dimensions
-    #     pca = PCA(n_components=2)
-    #     X_train_pca = pca.fit_transform(X_train_top_features)
-    #
-    #     # Step 7: Prepare validation and test sets
-    #     X_val_top_features = X_val[top_features]
-    #     X_test_top_features = X_test[top_features]
-    #
-    #     # Add placeholder cluster column for validation and test sets
-    #     X_val_with_clusters = X_val.copy()
-    #     X_test_with_clusters = X_test.copy()
-    #
-    #     X_val_with_clusters['Cluster'] = -1  # Placeholder for validation
-    #     X_test_with_clusters['Cluster'] = -1  # Placeholder for test
-    #
-    #
-    # # Cluster-Based XGBoost Classification with Label Encoding
-    #     # Define selected features for XGBoost
-    #     selected_features = [f for f in ['Anomaly Category', 'Time of Day', 'City', 'State'] if
-    #                          f in X_train.columns]
-    #
-    #     cluster_models = {}
-    #     cluster_predictions = []
-    #
-    #     # Add the target column ('Attack Type') to the training data with clusters
-    #     X_train_with_clusters['Attack Type'] = y_train
-    #
-    #     # Iterate over unique clusters in the training dataset
-    #     for cluster_id in X_train_with_clusters['Cluster'].unique():
-    #         if cluster_id == -1:  # Skip noise cluster
-    #             continue
-    #
-    #         # Subset training data for the cluster
-    #         cluster_train_data = X_train_with_clusters[X_train_with_clusters['Cluster'] == cluster_id]
-    #
-    #         # Ensure selected features are available in the data
-    #         cluster_features = [feature for feature in selected_features if feature in cluster_train_data.columns]
-    #
-    #         # Split features and target for training
-    #         X_cluster_train = cluster_train_data[cluster_features]
-    #         y_cluster_train = cluster_train_data['Attack Type']  # Target column
-    #
-    #         # Check if there is enough data in the cluster
-    #         if len(X_cluster_train) < 8:
-    #             print(f"Skipping cluster {cluster_id} due to insufficient data.")
-    #             continue
-    #
-    #         # Encode target labels
-    #         label_encoder = LabelEncoder()
-    #         y_cluster_train_encoded = label_encoder.fit_transform(y_cluster_train)
-    #
-    #         # Train XGBoost model for this cluster
-    #         model = XGBClassifier(eval_metric='logloss', random_state=42)
-    #         model.fit(X_cluster_train, y_cluster_train_encoded)
-    #
-    #         # Store the trained model and label encoder
-    #         cluster_models[cluster_id] = {
-    #             'model': model,
-    #             'label_encoder': label_encoder
-    #         }
-    #
-    #         # Make predictions on the training data for this cluster
-    #         cluster_preds = model.predict(X_cluster_train)
-    #
-    #         # Decode predictions back to original labels
-    #         cluster_preds_decoded = label_encoder.inverse_transform(cluster_preds)
-    #         cluster_predictions.extend(zip(cluster_train_data.index, cluster_preds_decoded))
-    #
-    #     # Store predictions as a DataFrame
-    #     cluster_predictions_df = pd.DataFrame(cluster_predictions, columns=['Index', 'Predicted Attack Type'])
-    #     cluster_predictions_df.set_index('Index', inplace=True)
-    #
-    #     # Merge predictions back with the original dataset (if needed)
-    #     X_train_with_predictions = X_train_with_clusters.copy()
-    #     X_train_with_predictions['Predicted Attack Type'] = cluster_predictions_df['Predicted Attack Type']
-    #
-    #     # Streamlit display of final predictions
-    #     st.write("Final Predictions:")
-    #     st.dataframe(X_train_with_predictions[['Cluster', 'Attack Type', 'Predicted Attack Type']].head())
-    #
-    # # RESULT: Evaluating Cluster-Based Classification Performance
-    #     # Add predictions back to the DataFrame
-    #     predictions_dict = dict(cluster_predictions)
-    #     df_cyber_processed['Cluster_Predicted_Attack_Type'] = df_cyber_processed.index.map(predictions_dict)
-    #
-    #     # Handle any NaN values in predictions
-    #     df_cyber_processed['Cluster_Predicted_Attack_Type'].fillna(df_cyber_processed['Attack Type'].mode()[0],
-    #                                                                inplace=True)
-    #
-    #     # Evaluate overall accuracy and classification report
-    #     st.subheader("Model Performance Metrics")
-    #     accuracy = accuracy_score(df_cyber_processed['Attack Type'],
-    #                               df_cyber_processed['Cluster_Predicted_Attack_Type'])
-    #     st.metric("Accuracy", f"{accuracy:.2%}")
-    #
-    #     # Display classification report
-    #     classification_report_output = classification_report(df_cyber_processed['Attack Type'],
-    #                                                         df_cyber_processed['Cluster_Predicted_Attack_Type'],
-    #                                                         output_dict=True)
-    #     df_last_report = pd.DataFrame(classification_report_output).transpose()
-    #
-    #     with st.expander("Classification Report"):
-    #         st.dataframe(df_last_report.style.background_gradient(cmap='Blues', subset=['precision', 'recall', 'f1-score']))
-    #
-    #     # Alert to say if we used precomputed clusters or if we have to recompute clusters
-    #     message_placeholder = st.empty()
-    #
-    #     st.write("---")
