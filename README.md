@@ -6,7 +6,7 @@ You can find the main project in the folder "MLproject".
 You can find the app files in the folder "WebApp".   
     
     
-Here is the Web Application: https://cybersecurity-attack-type-prediction.streamlit.app/  
+Here is the Web Application: https://ml-project-cybersecurity.streamlit.app/
 
 How to use the app:
 1) go inside the folder "Data"
