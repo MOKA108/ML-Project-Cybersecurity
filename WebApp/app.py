@@ -306,7 +306,7 @@ if uploaded_file is not None:
             # Save precomputed clusters for future use
             save_precomputed_clusters(df_cyber_processed, data_hash)
 
-    # RESULT PREDICTIONS --> NEW version (works locally, is it the same online?)
+    # RESULT PREDICTIONS --> NEW version (works locally, is it the same online? Yes with the change of the name below)
         # Rename the column for display purposes
         df_cyber_processed = df_cyber_processed.rename(columns={'Predicted_Attack_Type': 'Predicted Attack Type'})
 
@@ -513,9 +513,7 @@ if uploaded_file is not None:
         X_train_with_predictions['Predicted Attack Type'] = cluster_predictions_df['Predicted Attack Type']
 
 
-### NEW version (test : is it working?)
     # RESULT PREDICTIONS
-
         # Define attack type mapping
         attack_mapping = {0: "DDoS", 1: "Intrusion", 2: "Malware"}
 
@@ -533,14 +531,6 @@ if uploaded_file is not None:
         # Streamlit display of final predictions
         st.subheader("Predictions")
         st.dataframe(df_display.head(25))
-
-### OLD version
-
-        # # Streamlit display of final predictions
-        # st.subheader("Predictions")
-        # st.dataframe(X_train_with_predictions[['Cluster', 'Attack Type', 'Predicted Attack Type']].head(25))
-
-###
 
 
     # RESULT: Evaluating Cluster-Based Classification Performance
