@@ -180,10 +180,13 @@ if uploaded_file is not None:
         # Predict on the test data
         y_pred = model.predict(X_test_1)
 
-        # DataFrame to show actual vs predicted values
+        # Define mapping for attack types
+        attack_mapping = {0: "DDoS", 1: "Intrusion", 2: "Malware"}
+
+        # Apply mapping to predictions and actual values
         df_predictions = pd.DataFrame({
-            'Actual Attack Type': y_test_1,
-            'Predicted Attack Type': y_pred
+            'Actual Attack Type': [attack_mapping[label] for label in y_test_1],
+            'Predicted Attack Type': [attack_mapping[label] for label in y_pred]
         })
 
         # Display the predictions in Streamlit
@@ -218,10 +221,13 @@ if uploaded_file is not None:
         # Predict on the test data
         y_pred = model.predict(X_test_1)
 
-        # DataFrame to show actual vs predicted values
+        # Define mapping for attack types
+        attack_mapping = {0: "DDoS", 1: "Intrusion", 2: "Malware"}
+
+        # Apply mapping to predictions and actual values
         df_predictions = pd.DataFrame({
-            'Actual Attack Type': y_test_1,
-            'Predicted Attack Type': y_pred
+            'Actual Attack Type': [attack_mapping[label] for label in y_test_1],
+            'Predicted Attack Type': [attack_mapping[label] for label in y_pred]
         })
 
         # Display the predictions in Streamlit
@@ -300,13 +306,26 @@ if uploaded_file is not None:
             # Save precomputed clusters for future use
             save_precomputed_clusters(df_cyber_processed, data_hash)
 
-        # Rename the column for display purposes
-        df_cyber_processed = df_cyber_processed.rename(columns={'Predicted_Attack_Type': 'Predicted Attack Type'})
+    # RESULT PREDICTIONS --> NEW version (works locally, is it the same online?)
+        # Define attack type mapping
+        attack_mapping = {0: "DDoS", 1: "Intrusion", 2: "Malware"}
+
+        # Create a display DataFrame without modifying the original data
+        df_display = df_cyber_processed[['Cluster', 'Attack Type', 'Predicted_Attack_Type']].copy()
+
+        # Convert attack type columns to integers (if they are stored as strings or floats)
+        df_display['Attack Type'] = df_display['Attack Type'].astype(int, errors='ignore')
+        df_display['Predicted_Attack_Type'] = df_display['Predicted_Attack_Type'].astype(int, errors='ignore')
+
+        # Apply mapping (only for display)
+        df_display['Attack Type'] = df_display['Attack Type'].map(attack_mapping)
+        df_display['Predicted_Attack_Type'] = df_display['Predicted_Attack_Type'].map(attack_mapping)
 
         # Streamlit display of final predictions
         st.subheader("Predictions")
-        st.dataframe(df_cyber_processed[['Cluster', 'Attack Type', 'Predicted Attack Type']].head(25))
+        st.dataframe(df_display.head(25))
 
+    # RESULT PERFORMANCE METRICS
         # Model performance evaluation
         st.subheader("Model Performance Metrics")
         accuracy = accuracy_score(df_cyber_processed[target], df_cyber_processed['Predicted Attack Type'])
@@ -454,7 +473,6 @@ if uploaded_file is not None:
             X_cluster_train = cluster_train_data[cluster_features]
             y_cluster_train = cluster_train_data['Attack Type']  # Target column
 
-
             # Check if there is enough data in the cluster
             if len(X_cluster_train) < 8:
                 print(f"Skipping cluster {cluster_id} due to insufficient data.")
@@ -490,9 +508,34 @@ if uploaded_file is not None:
         X_train_with_predictions = X_train_with_clusters.copy()
         X_train_with_predictions['Predicted Attack Type'] = cluster_predictions_df['Predicted Attack Type']
 
+
+### NEW version (test : is it working?)
+    # RESULT PREDICTIONS -->
+        # Define attack type mapping
+        attack_mapping = {0: "DDoS", 1: "Intrusion", 2: "Malware"}
+
+        # Create a display DataFrame without modifying the original data
+        df_display = df_cyber_processed[['Cluster', 'Attack Type', 'Predicted_Attack_Type']].copy()
+
+        # Convert attack type columns to integers (if they are stored as strings or floats)
+        df_display['Attack Type'] = df_display['Attack Type'].astype(int, errors='ignore')
+        df_display['Predicted_Attack_Type'] = df_display['Predicted_Attack_Type'].astype(int, errors='ignore')
+
+        # Apply mapping (only for display)
+        df_display['Attack Type'] = df_display['Attack Type'].map(attack_mapping)
+        df_display['Predicted_Attack_Type'] = df_display['Predicted_Attack_Type'].map(attack_mapping)
+
         # Streamlit display of final predictions
         st.subheader("Predictions")
-        st.dataframe(X_train_with_predictions[['Cluster', 'Attack Type', 'Predicted Attack Type']].head(25))
+        st.dataframe(df_display.head(25))
+
+### OLD version
+
+        # # Streamlit display of final predictions
+        # st.subheader("Predictions")
+        # st.dataframe(X_train_with_predictions[['Cluster', 'Attack Type', 'Predicted Attack Type']].head(25))
+
+###
 
 
     # RESULT: Evaluating Cluster-Based Classification Performance
