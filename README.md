@@ -5,11 +5,11 @@ This project is done in the scope of the DSTI Python ML course.
 The goal is to returns the prediction for the type of cyber-attack.     
 You can find the main project in the folder "MLproject".      
 You can find the app files in the folder "WebApp".    
-      
-      
+    
+    
 Here is the Web Application: https://cybersecurity-attack-type-prediction.streamlit.app/  
 
-How to use the app:
+## How to use the app:
 1) go inside the folder "Data"
 2) download the file "Encoded_Cybersecurity_Data.csv"
 3) open the app
