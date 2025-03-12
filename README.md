@@ -1,9 +1,9 @@
 # DSTI Python Machine Learning Project
 
 ## Overview
-This project is done in the scope of the DSTI Python ML course.   
-The goal is to returns the prediction for the type of cyber-attack.   
-You can find the main project in the folder "MLproject".   
+This project is done in the scope of the DSTI Python ML course.    
+The goal is to returns the prediction for the type of cyber-attack.    
+You can find the main project in the folder "MLproject".    
 You can find the app files in the folder "WebApp".   
     
     
