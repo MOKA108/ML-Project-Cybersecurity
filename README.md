@@ -1,8 +1,9 @@
 # DSTI Python Machine Learning Project
 
 ## Overview
-This project is done in the scope of the DSTI Python ML course.  
-You can find the main project in the folder "MLproject".  
+This project is done in the scope of the DSTI Python ML course.   
+The goal is to returns the prediction for the type of cyber-attack.   
+You can find the main project in the folder "MLproject".   
 You can find the app files in the folder "WebApp".   
     
     
@@ -40,8 +41,11 @@ How to use the app:
 
 
 ## To go further on this project:
-- we can try to optimize the web application by adding the xgboost trained model as a pickle file
-- we can add the last model which correspond to HDBSCAN with XGBoost but wil the hyperparameters with Optuna
-
-
-To reproduce the project, you can use the requirements.txt file (located in the folder "WebApp") to install the necessary packages.
+- we can try to optimize the web application by adding the xgboost trained model as a pickle file    
+- we can add the last model which correspond to HDBSCAN with XGBoost and with the hyperparameters found thanks to Optuna    
+- we can also add a menu with 2 options: the first page would be the one with all the model prediction and precision (already done)      
+- on the other page of the menu, we can make the user select input as "device", "location"...etc (from the top features) and get an output for the predicted type of attack (DDoS, Intrusion or Malware)      
+- we can eventually adding an input in the second page for choosing a model (or adding only the best model for this page)     
+    
+    
+To reproduce the project, you can use the requirements.txt file (located in the folder "WebApp") to install the necessary packages.    
