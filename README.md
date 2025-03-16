@@ -45,7 +45,8 @@ Here is the Web Application: https://cybersecurity-attack-type-prediction.stream
 - we can add the last model which correspond to HDBSCAN with XGBoost and with the hyperparameters found thanks to Optuna    
 - we can also add a menu with 2 options: the first page would be the one with all the model prediction and precision (already done)      
 - on the other page of the menu, we can make the user select input as "device", "location"...etc (from the top features) and get an output for the predicted type of attack (DDoS, Intrusion or Malware)      
-- we can eventually adding an input in the second page for choosing a model (or adding only the best model for this page)     
+- we can eventually add an input in the second page for choosing a model (or adding only the best model for this page)
+- about the encoded dataset to drop in the drop box, we can implement the EDA, FE and Encoding parts in the app.py to be able to drop a raw dataset instead       
     
     
 To reproduce the project, you can use the requirements.txt file (located in the folder "WebApp") to install the necessary packages.    
